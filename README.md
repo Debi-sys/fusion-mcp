@@ -10,7 +10,7 @@ Claude Desktop  ──stdio──▶  MCP Server (Python)  ──HTTP──▶  
                              (your machine)                   (inside Fusion 360)
 ```
 
-1. **MCP Server** (`mcp_server/fusion_server.py`) — Runs locally and exposes 90+ tools to Claude via the Model Context Protocol over stdio.
+1. **MCP Server** (`mcp_server/fusion_server.py`) — Runs locally and exposes tools to Claude via the Model Context Protocol over stdio.
 2. **Fusion 360 Add-in** (`FusionMCP.py`) — Runs inside Fusion 360, listens on `http://127.0.0.1:7432`, receives commands from the MCP server, and executes them on Fusion's main thread using the Fusion 360 Python API.
 
 ## Features
@@ -84,7 +84,7 @@ This installs:
 
 ### 3. Install the Fusion 360 Add-in
 
-Copy the `FusionMCP.py` file into Fusion 360's add-ins directory.
+Create a folder named `FusionMCP` inside Fusion 360's add-ins directory, then copy **both** `FusionMCP.py` and `FusionMCP.manifest` into it.
 
 **Windows:**
 ```
@@ -96,7 +96,7 @@ Copy the `FusionMCP.py` file into Fusion 360's add-ins directory.
 ~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns/FusionMCP/
 ```
 
-Create the `FusionMCP` folder if it doesn't exist, then place `FusionMCP.py` inside it.
+The folder must be named exactly `FusionMCP` and contain both files — Fusion 360 will not recognize the add-in without the manifest.
 
 #### Start the Add-in in Fusion 360
 

@@ -1011,12 +1011,12 @@ def redo(steps: int = 1) -> str:
     return _call("redo", {"steps": steps})
 
 @mcp.tool()
-def save_design(description: str = "Saved by Claude") -> str:
+def save_design(description: str = "Saved") -> str:
     """Save the current design. Use save_as first if the document is brand new."""
     return _call("save", {"description": description})
 
 @mcp.tool()
-def save_as(name: str = "My Design", description: str = "Saved by Claude") -> str:
+def save_as(name: str = "My Design", description: str = "Saved") -> str:
     """
     Save document with a new name.
 
@@ -1032,5 +1032,5 @@ def save_as(name: str = "My Design", description: str = "Saved by Claude") -> st
 if __name__ == "__main__":
     print("Fusion 360 MCP Server starting...")
     print(f"Connecting to Fusion add-in at {FUSION_URL}")
-    print("Waiting for Claude Desktop to connect via stdio...")
+    print("Waiting for MCP client to connect via stdio...")
     mcp.run(transport="stdio")
