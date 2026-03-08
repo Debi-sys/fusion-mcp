@@ -1,18 +1,9 @@
 """
-Fusion 360 MCP Server v4 - Ultimate Edition
-=============================================
-90+ tools. Covers everything competitors have and more.
+Fusion 360 MCP Server
 
-New in v4:
-  - execute_script: Run arbitrary Python inside Fusion (game-changer)
-  - Sketch constraints (coincident, tangent, perpendicular, parallel, horizontal, vertical, concentric, equal, fix)
-  - Sketch dimensions (linear distance, angular, diameter, radius)
-  - Joint/Assembly tools (rigid, revolute, slider, cylindrical, pin-slot, ball)
-  - Rotate body, create new document, hole features, construction axes
-  - Edge info, sketch info, timeline info
-  - Screenshot/viewport capture, 3MF export
-  - Clear design, finish sketch, draw slot, draw center-rectangle
-  - Pipe feature, text in sketch, non-uniform scale
+An MCP (Model Context Protocol) server that exposes Fusion 360 CAD operations
+as tools for AI assistants. Communicates with the FusionMCP add-in running
+inside Fusion 360 via HTTP on localhost:7432.
 """
 
 import requests
@@ -39,9 +30,7 @@ def _call(command: str, params: dict = None) -> str:
         return f"Unexpected error: {e}"
 
 
-# ==============================================================================
-# STATUS & INFO
-# ==============================================================================
+# ---- Status & Info ----
 
 @mcp.tool()
 def fusion_status() -> str:
@@ -123,9 +112,7 @@ def measure_between(entity1: str = "", entity2: str = "") -> str:
     return _call("measure_between", {"entity1": entity1, "entity2": entity2})
 
 
-# ==============================================================================
-# EXECUTE ARBITRARY PYTHON (GAME-CHANGER)
-# ==============================================================================
+# ---- Execute Script ----
 
 @mcp.tool()
 def execute_script(code: str) -> str:
@@ -154,9 +141,7 @@ def execute_script(code: str) -> str:
     return _call("execute_script", {"code": code})
 
 
-# ==============================================================================
-# DOCUMENT MANAGEMENT
-# ==============================================================================
+# ---- Document Management ----
 
 @mcp.tool()
 def create_new_document(name: str = "Untitled") -> str:
@@ -174,9 +159,7 @@ def clear_design() -> str:
     return _call("clear_design")
 
 
-# ==============================================================================
-# SKETCH TOOLS
-# ==============================================================================
+# ---- Sketch Tools ----
 
 @mcp.tool()
 def create_sketch(plane: str = "XY", name: str = "", component: str = "") -> str:
@@ -422,9 +405,7 @@ def rectangular_pattern_sketch(x_count: int = 2, y_count: int = 2,
         "x_spacing": x_spacing, "y_spacing": y_spacing, "sketch": sketch})
 
 
-# ==============================================================================
-# SKETCH CONSTRAINTS
-# ==============================================================================
+# ---- Sketch Constraints ----
 
 @mcp.tool()
 def add_constraint(constraint_type: str = "coincident",
@@ -476,9 +457,7 @@ def add_sketch_dimension(dimension_type: str = "distance",
     })
 
 
-# ==============================================================================
-# FEATURE TOOLS
-# ==============================================================================
+# ---- Feature Tools ----
 
 @mcp.tool()
 def extrude_sketch(distance: float = 1.0, operation: str = "new_body",
@@ -793,9 +772,7 @@ def add_thread(body: str = "0", face_index: int = 0,
                                  "full_length": full_length, "right_handed": right_handed})
 
 
-# ==============================================================================
-# ASSEMBLY / JOINTS
-# ==============================================================================
+# ---- Assembly / Joints ----
 
 @mcp.tool()
 def create_component(name: str = "New Component") -> str:
@@ -849,9 +826,7 @@ def create_as_built_joint(component1: str = "", component2: str = "",
     })
 
 
-# ==============================================================================
-# BODY MANAGEMENT
-# ==============================================================================
+# ---- Body Management ----
 
 @mcp.tool()
 def delete_body(body: str = "0") -> str:
@@ -882,9 +857,7 @@ def toggle_body_visibility(body: str = "0") -> str:
     return _call("toggle_body_visibility", {"body": body})
 
 
-# ==============================================================================
-# CONSTRUCTION GEOMETRY
-# ==============================================================================
+# ---- Construction Geometry ----
 
 @mcp.tool()
 def add_construction_plane(base_plane: str = "XY", offset: float = 2.0,
@@ -919,9 +892,7 @@ def add_construction_axis(axis_type: str = "line", body: str = "0",
     })
 
 
-# ==============================================================================
-# PARAMETER TOOLS
-# ==============================================================================
+# ---- Parameter Tools ----
 
 @mcp.tool()
 def list_parameters() -> str:
@@ -955,9 +926,7 @@ def update_parameter(name: str = "width", value: float = 15.0) -> str:
     return _call("update_parameter", {"name": name, "value": value})
 
 
-# ==============================================================================
-# MATERIALS & APPEARANCES
-# ==============================================================================
+# ---- Materials & Appearances ----
 
 @mcp.tool()
 def list_appearances(search: str = "") -> str:
@@ -994,9 +963,7 @@ def set_body_color(body: str = "0", r: int = 100, g: int = 149,
     return _call("set_body_color", {"body": body, "r": r, "g": g, "b": b, "opacity": opacity})
 
 
-# ==============================================================================
-# EXPORT & CAPTURE
-# ==============================================================================
+# ---- Export & Capture ----
 
 @mcp.tool()
 def export_as_stl(path: str = "") -> str:
@@ -1031,9 +998,7 @@ def capture_screenshot(path: str = "", width: int = 1920, height: int = 1080) ->
     return _call("capture_screenshot", {"path": path, "width": width, "height": height})
 
 
-# ==============================================================================
-# HISTORY & FILE
-# ==============================================================================
+# ---- History & File ----
 
 @mcp.tool()
 def undo(steps: int = 1) -> str:
@@ -1062,13 +1027,10 @@ def save_as(name: str = "My Design", description: str = "Saved by Claude") -> st
     return _call("save_as", {"name": name, "description": description})
 
 
-# ==============================================================================
-# Entry Point
-# ==============================================================================
+# ---- Entry Point ----
 
 if __name__ == "__main__":
-    print("Fusion 360 MCP Server v4 (Ultimate) starting...")
+    print("Fusion 360 MCP Server starting...")
     print(f"Connecting to Fusion add-in at {FUSION_URL}")
-    print("90+ tools including execute_script, constraints, joints, holes...")
     print("Waiting for Claude Desktop to connect via stdio...")
     mcp.run(transport="stdio")
