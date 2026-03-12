@@ -39,6 +39,8 @@ class MCPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/ping":
             self._respond(200, {"status": "ok", "message": "Fusion MCP bridge running"})
+        elif self.path == "/health":
+            self._respond(200, _health_check())
         else:
             self._respond(404, {"error": "Not found"})
 
@@ -1485,6 +1487,107 @@ def _save_as(p):
         return {"error": str(e)}
 
 
+# ---- Health Check ----
+
+def _health_check():
+    try:
+        version = app.version if app else "unknown"
+        doc_name = app.activeDocument.name if app and app.activeDocument else "none"
+        design = _design()
+        body_count = design.rootComponent.bRepBodies.count if design else 0
+        return {
+            "status": "ok",
+            "fusion_version": version,
+            "active_document": doc_name,
+            "body_count": body_count,
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ---- Batch Commands ----
+
+def _batch_sketch_rectangles(root, p):
+    """Draw multiple center rectangles in a single call for performance."""
+    sketch = _resolve_sketch(root, p)
+    rects = p.get("rectangles", [])
+    if not rects:
+        return {"error": "No rectangles provided"}
+    lines = sketch.sketchCurves.sketchLines
+    count = 0
+    for rect in rects:
+        cx = float(rect.get("cx", 0))
+        cy = float(rect.get("cy", 0))
+        w = float(rect.get("width", 1))
+        h = float(rect.get("height", 1))
+        x1, y1 = cx - w / 2, cy - h / 2
+        x2, y2 = cx + w / 2, cy + h / 2
+        lines.addTwoPointRectangle(
+            adsk.core.Point3D.create(x1, y1, 0),
+            adsk.core.Point3D.create(x2, y2, 0))
+        count += 1
+    return {"sketch": sketch.name, "rectangles_drawn": count,
+            "profiles": sketch.profiles.count}
+
+
+def _batch_sketch_circles(root, p):
+    """Draw multiple circles in a single call for performance."""
+    sketch = _resolve_sketch(root, p)
+    circles_data = p.get("circles", [])
+    if not circles_data:
+        return {"error": "No circles provided"}
+    circles = sketch.sketchCurves.sketchCircles
+    count = 0
+    for c in circles_data:
+        cx = float(c.get("cx", 0))
+        cy = float(c.get("cy", 0))
+        r = float(c.get("radius", 0.5))
+        circles.addByCenterRadius(adsk.core.Point3D.create(cx, cy, 0), r)
+        count += 1
+    return {"sketch": sketch.name, "circles_drawn": count,
+            "profiles": sketch.profiles.count}
+
+
+def _execute_operations_batch(p):
+    """Execute a sequence of commands atomically for performance."""
+    operations = p.get("operations", [])
+    if not operations:
+        return {"error": "No operations provided"}
+
+    design = _design()
+    root = design.rootComponent
+    results = []
+
+    for i, op in enumerate(operations):
+        cmd = op.get("command", "")
+        params = op.get("params", {})
+        # Build a mini data dict and process it
+        op_data = {"command": cmd, "params": params}
+        try:
+            result = _process_command(op_data)
+            results.append({"index": i, "command": cmd, "result": result})
+            if "error" in result:
+                return {
+                    "error": f"Operation {i} ({cmd}) failed: {result['error']}",
+                    "completed": i,
+                    "total": len(operations),
+                    "results": results,
+                }
+        except Exception as e:
+            return {
+                "error": f"Operation {i} ({cmd}) exception: {str(e)}",
+                "completed": i,
+                "total": len(operations),
+                "results": results,
+            }
+
+    return {
+        "success": True,
+        "operations_completed": len(operations),
+        "results": results,
+    }
+
+
 # ---- Dispatcher ----
 
 def _process_command(data: dict) -> dict:
@@ -1575,6 +1678,9 @@ def _process_command(data: dict) -> dict:
             "save":                       lambda: _save_design(p),
             "save_as":                    lambda: _save_as(p),
             "export_obj":                 lambda: {"error": "OBJ export is not supported by the Fusion 360 API. Use STL, STEP, or 3MF instead."},
+            "batch_sketch_rectangles":    lambda: _batch_sketch_rectangles(root, p),
+            "batch_sketch_circles":       lambda: _batch_sketch_circles(root, p),
+            "execute_operations_batch":   lambda: _execute_operations_batch(p),
         }
 
         if cmd in dispatch:

@@ -8,26 +8,39 @@ inside Fusion 360 via HTTP on localhost:7432.
 
 import requests
 import json
+import time
 from mcp.server.fastmcp import FastMCP
 
 FUSION_URL = "http://127.0.0.1:7432"
+FUSION_TIMEOUT = 60
+FUSION_RETRIES = 2
 mcp = FastMCP("Fusion 360")
 
 
 def _call(command: str, params: dict = None) -> str:
     if params is None:
         params = {}
-    try:
-        r = requests.post(f"{FUSION_URL}/command",
-                          json={"command": command, "params": params}, timeout=30)
-        data = r.json()
-        if "error" in data:
-            return f"Error: {data['error']}"
-        return json.dumps(data, indent=2)
-    except requests.exceptions.ConnectionError:
-        return "Cannot reach Fusion 360. Make sure Fusion is open and the FusionMCP add-in is running."
-    except Exception as e:
-        return f"Unexpected error: {e}"
+    last_err = None
+    for attempt in range(1 + FUSION_RETRIES):
+        try:
+            r = requests.post(f"{FUSION_URL}/command",
+                              json={"command": command, "params": params},
+                              timeout=FUSION_TIMEOUT)
+            data = r.json()
+            if "error" in data:
+                return f"Error: {data['error']}"
+            return json.dumps(data, indent=2)
+        except requests.exceptions.ConnectionError as e:
+            last_err = e
+            if attempt < FUSION_RETRIES:
+                time.sleep(1)
+                continue
+            return "Cannot reach Fusion 360. Make sure Fusion is open and the FusionMCP add-in is running."
+        except requests.exceptions.Timeout:
+            return f"Fusion 360 timed out after {FUSION_TIMEOUT}s on command '{command}'. The operation may be too complex."
+        except Exception as e:
+            return f"Unexpected error: {e}"
+    return f"Failed after {FUSION_RETRIES + 1} attempts: {last_err}"
 
 
 # ---- Status & Info ----
@@ -1025,6 +1038,17 @@ def save_as(name: str = "My Design", description: str = "Saved") -> str:
         description: Version description.
     """
     return _call("save_as", {"name": name, "description": description})
+
+
+# ---- Keyboard Design Tools ----
+
+from keyboard.case_tools import register_case_tools
+from keyboard.plate_tools import register_plate_tools
+from keyboard.accessory_tools import register_accessory_tools
+
+register_case_tools(mcp, _call)
+register_plate_tools(mcp, _call)
+register_accessory_tools(mcp, _call)
 
 
 # ---- Entry Point ----
