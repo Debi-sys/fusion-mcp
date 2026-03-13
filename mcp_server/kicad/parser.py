@@ -16,6 +16,8 @@ KiCad PCB files use a Lisp-like S-expression syntax:
 Reference: https://dev-docs.kicad.org/en/file-formats/sexpr-pcb/
 """
 
+from __future__ import annotations
+
 import json
 import math
 import re
