@@ -1051,6 +1051,13 @@ register_plate_tools(mcp, _call)
 register_accessory_tools(mcp, _call)
 
 
+# ---- KiCad PCB Tools ----
+
+from kicad.pcb_tools import register_kicad_tools
+
+register_kicad_tools(mcp)
+
+
 # ---- Entry Point ----
 
 if __name__ == "__main__":
