@@ -142,6 +142,7 @@ def register_accessory_tools(mcp, _call):
         body: str = "0",
         layout: str = "60%",
         kle_json: str = "",
+        custom_holes_mm: list = [],
         screw_size: str = "M2",
         standoff_height_mm: float = 5.0,
         use_heat_set_inserts: bool = False,
@@ -156,23 +157,30 @@ def register_accessory_tools(mcp, _call):
 
         Args:
             body: Body name or index of the case.
-            layout: Standard layout for PCB hole positions.
+            layout: Standard layout for PCB hole positions (ignored if custom_holes_mm is provided).
             kle_json: Optional KLE JSON (uses heuristic hole placement).
+            custom_holes_mm: Custom hole positions as list of {x_mm, y_mm} dicts (e.g. from KiCad).
+                             Coordinates are in mm from the board origin. When provided, layout
+                             and kle_json are ignored. Bezel offsets are still applied.
             screw_size: 'M2', 'M2.5', or 'M3'.
             standoff_height_mm: Standoff height above case floor in mm.
             use_heat_set_inserts: Use heat-set insert diameter instead of tap diameter.
             bezel_left_mm: Left bezel to offset hole positions in mm.
             bezel_front_mm: Front bezel to offset hole positions in mm.
         """
-        if kle_json:
+        if custom_holes_mm:
+            # Convert custom holes from mm to cm (same format as layout holes)
+            holes = [{"x": mm_to_cm(h["x_mm"]), "y": mm_to_cm(h["y_mm"])} for h in custom_holes_mm]
+        elif kle_json:
             from .kle_parser import parse_kle_json
             layout_data = parse_kle_json(kle_json)
+            holes = layout_data.get("pcb_mounting_holes", [])
         else:
             layout_data = get_layout(layout)
+            holes = layout_data.get("pcb_mounting_holes", [])
 
-        holes = layout_data.get("pcb_mounting_holes", [])
         if not holes:
-            return json.dumps({"error": "No mounting holes defined for this layout."})
+            return json.dumps({"error": "No mounting holes found. Provide custom_holes_mm, a layout, or KLE JSON."})
 
         screw_key = screw_size.upper()
         if screw_key not in SCREW_SIZES_CM:

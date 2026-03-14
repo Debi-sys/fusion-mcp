@@ -291,6 +291,9 @@ def _extract_footprints(tree: list) -> list[dict]:
                     value = prop[2]
 
         pads = []
+        rot_rad = math.radians(rotation)
+        cos_r = math.cos(rot_rad)
+        sin_r = math.sin(rot_rad)
         for pad_node in _find_all(child, "pad"):
             pad_info: dict = {}
             if len(pad_node) > 1:
@@ -301,8 +304,16 @@ def _extract_footprints(tree: list) -> list[dict]:
                 pad_info["shape"] = pad_node[3]  # circle, rect, oval, etc.
             pad_at = _find(pad_node, "at")
             if pad_at and len(pad_at) > 2:
-                pad_info["x_mm"] = _to_float(pad_at[1])
-                pad_info["y_mm"] = _to_float(pad_at[2])
+                rel_x = _to_float(pad_at[1])
+                rel_y = _to_float(pad_at[2])
+                pad_info["x_mm"] = rel_x
+                pad_info["y_mm"] = rel_y
+                # Compute board-absolute position by rotating the relative
+                # offset by the footprint's rotation and adding its origin.
+                abs_x = x + rel_x * cos_r - rel_y * sin_r
+                abs_y = y + rel_x * sin_r + rel_y * cos_r
+                pad_info["abs_x_mm"] = round(abs_x, 4)
+                pad_info["abs_y_mm"] = round(abs_y, 4)
             pad_size = _find(pad_node, "size")
             if pad_size and len(pad_size) > 2:
                 pad_info["size_x_mm"] = _to_float(pad_size[1])

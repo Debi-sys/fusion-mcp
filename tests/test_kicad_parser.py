@@ -172,5 +172,45 @@ class TestEdgeCases(unittest.TestCase):
         self.assertEqual(fp["value"], "TestChip")
 
 
+class TestAbsolutePadPositions(unittest.TestCase):
+    """Test that pad positions include board-absolute coordinates."""
+
+    @classmethod
+    def setUpClass(cls):
+        with open(SAMPLE_PCB, "r", encoding="utf-8") as fh:
+            cls.parsed = parse_kicad_pcb(fh.read())
+
+    def test_zero_rotation_pad_abs_position(self):
+        """Mounting hole at (5,5) with pad at (0,0) -> abs should be (5,5)."""
+        h1 = [fp for fp in self.parsed["footprint_details"] if fp["reference"] == "H1"][0]
+        pad = h1["pads"][0]
+        self.assertAlmostEqual(pad["abs_x_mm"], 5.0)
+        self.assertAlmostEqual(pad["abs_y_mm"], 5.0)
+
+    def test_zero_rotation_offset_pad(self):
+        """U1 at (50,30) with pad1 at (-4,-2.4) -> abs should be (46,-27.6)."""
+        u1 = [fp for fp in self.parsed["footprint_details"] if fp["reference"] == "U1"][0]
+        pad1 = u1["pads"][0]
+        self.assertAlmostEqual(pad1["abs_x_mm"], 46.0, places=2)
+        self.assertAlmostEqual(pad1["abs_y_mm"], 27.6, places=2)
+
+    def test_rotated_footprint_pad(self):
+        """J1 at (52,0) with 180 deg rotation. Pad A1 at (-3.25,4.32).
+        Rotated 180: abs = (52 - (-3.25)*cos180 - 4.32*sin180, 0 + (-3.25)*sin180 + 4.32*cos180)
+                    = (52 - 3.25, 0 - 4.32) = (55.25, -4.32)."""
+        j1 = [fp for fp in self.parsed["footprint_details"] if fp["reference"] == "J1"][0]
+        pad_a1 = [p for p in j1["pads"] if p["number"] == "A1"][0]
+        self.assertAlmostEqual(pad_a1["abs_x_mm"], 55.25, places=2)
+        self.assertAlmostEqual(pad_a1["abs_y_mm"], -4.32, places=2)
+
+    def test_all_pads_have_abs_fields(self):
+        """All pads with position data should have abs_x_mm and abs_y_mm."""
+        for fp in self.parsed["footprint_details"]:
+            for pad in fp["pads"]:
+                if "x_mm" in pad:
+                    self.assertIn("abs_x_mm", pad, f"Missing abs_x_mm in {fp['reference']} pad {pad.get('number')}")
+                    self.assertIn("abs_y_mm", pad, f"Missing abs_y_mm in {fp['reference']} pad {pad.get('number')}")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1055,7 +1055,7 @@ register_accessory_tools(mcp, _call)
 
 from kicad.pcb_tools import register_kicad_tools
 
-register_kicad_tools(mcp)
+register_kicad_tools(mcp, _call)
 
 
 # ---- Entry Point ----
